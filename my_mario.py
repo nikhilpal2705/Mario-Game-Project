@@ -1,12 +1,14 @@
-import random, pygame, sys
+import random, pygame, sys, os
 from pygame.locals import *
 
 w = 1200
 h = 700
-global dirc, ranvar, rect_fireball, flag, i, temp, scaled_fireball, gameend, score, topscore, scorefont
+global dirc, ranvar, rect_fireball, flag, i, flame, scaled_fireball, gameend, score, topscore, scorefont, level, lastLevel
 score = 0
 topscore = 0
-temp = [1]
+level = 1
+lastLevel = False
+flame = [1]
 i = 0
 flag = 1
 rect_fireball = []
@@ -41,9 +43,10 @@ def screen_init():
 
 
 def screen_design():
-    global dirc, temp, i, flag, rect_fireball, score, topscore, scorefont
+    global dirc, flame, i, flag, rect_fireball, score, topscore, scorefont, level
     score = 0
-    temp = [1]
+    flame = [1]
+    level = 1
     i = 0
     flag = 1
     rect_fireball = []
@@ -62,7 +65,7 @@ def screen_design():
     rect_dragon = dragon_img.get_rect()
     rect_dragon.left = w - 150
     rect_dragon.bottom = h - 100
-    print(rect_dragon.top)
+    # print(rect_dragon.top)
     window.blit(dragon_img, rect_dragon)
 
     global fire_img, rect_fire
@@ -75,7 +78,7 @@ def screen_design():
     global cactus_img, rect_cactus
     cactus_img = pygame.image.load("cactus.png")
     rect_cactus = cactus_img.get_rect()
-    print(rect_cactus.bottom)
+    # print(rect_cactus.bottom)
     window.blit(cactus_img, rect_cactus)
     pygame.display.update()
 
@@ -90,7 +93,7 @@ def driver():
         dragon_handler()
         fireball_handler()
         drawtext(
-            "Score : %s | Top score : %s" % (score, topscore),
+            "Score : %s | Top score : %s | Level : %s" % (score, topscore, level),
             scorefont,
             window,
             350,
@@ -109,6 +112,7 @@ def drawtext(text, font, surface, x, y):  # to display text on the screen
 
 def mario_handler():
     global mario_img, rect_mario, score, topscore
+
     for e in pygame.event.get():
         if e.type == KEYDOWN:
             if e.key == K_ESCAPE:
@@ -126,13 +130,14 @@ def mario_handler():
 
 
 def collision_handler(f):
-    global topscore
+    global topscore, level
     if (
         rect_mario.collidepoint(f.left + 10, f.top + 10)
         or rect_mario.collidepoint(f.left + 10, f.bottom - 10)
         or rect_cactus.collidepoint(rect_mario.right, rect_mario.top + 10)
         or rect_fire.collidepoint(rect_mario.right, rect_mario.bottom - 10)
     ):
+        level = 1
         if score > topscore:
             topscore = score
         pygame.mixer.music.stop()
@@ -184,25 +189,44 @@ def dragon_handler():
 
 
 def fireball_handler():
-    global fireball_img, rect_fireball, ranvar, dirc, temp, flag, i, scaled_fireball
+    global fireball_img, rect_fireball, ranvar, dirc, flame, flag, i, scaled_fireball, level, lastLevel
+    if score in range(0, 250):
+        level = 1
+    elif score in range(250, 500):
+        level = 2
+        # flame.clear()
+        flame = random.sample(ranvar, level)
+        flame.sort()
+        if flag == 1:
+            flame.reverse()
+            flag = 0
+    elif score > 500 and not lastLevel:
+        level = 3
+        # flame.clear()
+        flame = random.sample(ranvar, level)
+        flame.sort()
+        if flag == 1:
+            flame.reverse()
+            flag = 0
+        lastLevel = True
 
     # creating random coordinates for fireballs
     if dirc == "goingdown" and flag == 0:
         i = 0
-        temp.clear()
-        temp = random.sample(ranvar, 3)
-        temp.sort()
+        # flame.clear()
+        flame = random.sample(ranvar, level)
+        flame.sort()
         flag = 1
     elif dirc == "goingup" and flag == 1:
         i = 0
-        temp.clear()
-        temp = random.sample(ranvar, 3)
-        temp.sort()
-        temp.reverse()
+        # flame.clear()
+        flame = random.sample(ranvar, level)
+        flame.sort()
+        flame.reverse()
         flag = 0
 
     # creating fireball
-    if i < 3 and rect_dragon.top == temp[i] - 2:
+    if i < level and rect_dragon.top == flame[i] - 2:
         fireball_img = pygame.image.load("fireball.png")
         scaled_fireball = pygame.transform.scale(fireball_img, (45, 45))
         rect_fireball.append(scaled_fireball.get_rect())
